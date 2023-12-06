@@ -1,0 +1,40 @@
+---
+- name: Configure EC2 instance with Nginx Docker container
+  hosts: webserver
+  become: true
+  gather_facts: true
+  vars_prompt:
+    - name: docker_registry_username
+      prompt: "Enter Docker Registry Username"
+      private: no  # Set to yes if you want to hide the input (password)
+    - name: docker_registry_password
+      prompt: "Enter Docker Registry Password"
+      private: yes  # Set to yes to hide the input (password)
+  tasks:
+    - name: Update apt-get repo and cache
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+    - name: Install Docker Engine
+      apt:
+        name: docker.io
+        state: present
+    - name: Install Docker CLI
+      apt:
+        name: docker-compose
+        state: present
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+    - name: Docker Login
+      docker_login:
+        registry_url: "https://registry.hub.docker.com/v2/"
+        username: "{{ docker_registry_username }}"
+        password: "{{ docker_registry_password }}"
+    - name: Run Nginx Docker container
+      docker_container:
+        name: nginx-example-docker
+        image: nginx
+        ports:
+          - "443:80"
+      become: true
